@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>最後一課</title>
+<style>
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+body{
+    overflow:hidden;
+    background:black;
+    font-family:sans-serif;
+}
+
+.background{
+    position:fixed;
+    width:100%;
+    height:100%;
+    background:url("img/IMG_0297.jpg") center center;
+    background-size:cover;
+    background-repeat: no-repeat;
+    transition: opacity 1s;
+    z-index:1;
+}
+.background.hideBg{
+    opacity:0;
+    pointer-events:none;
+}
+
+/* 劇情場景圖層 */
+.sceneImg{
+    position:fixed;
+    width:100%;
+    height:100%;
+    background-size:cover;
+    background-position:center center;
+    background-repeat:no-repeat;
+    opacity:0;
+    transition:opacity 1.2s ease-in-out;
+    z-index:2;
+}
+.sceneImg.show{
+    opacity:1;
+}
+/* 切圖專用黑遮罩 → 不會蓋到對話框 */
+.transition-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width:100%;
+    height:100%;
+    background:#000;
+    opacity:0;
+    z-index:3;
+    pointer-events:none;
+    transition: opacity 0.3s ease-in-out;
+}
+
+#menu{
+    position:absolute;
+    width:100%;
+    height:100%;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    align-items:center;
+    color:white;
+    z-index:5;
+    gap:2px;
+}
+
+#nameScreen{
+    display:none;
+    position:absolute;
+    width:100%;
+    height:100%;
+    flex-direction:column;
+    justify-content:center;
+    align-items:center;
+    gap:20px;
+    z-index:6;
+    color:white;
+}
+
+#nameInput{
+    padding:10px;
+    font-size:18px;
+    text-align:center;
+}
+
+#dialogueBox{
+    cursor: pointer;
+    opacity:0;
+    transition:1s;
+    position:fixed;
+    bottom:50px;
+    left:50%;
+    transform:translateX(-50%);
+    width:70%;
+    padding:20px 30px;
+    background:rgba(0,0,0,0.6);
+    border:1px solid rgba(255,255,255,0.5);
+    border-radius:12px;
+    color:white;
+    font-size:24px;
+    line-height:1.6;
+    z-index:30;
+    min-height:140px;
+}
+
+.logo{
+    font-size:80px;
+    opacity:0;
+    animation:fadeLogo 2s forwards;
+    letter-spacing:8px;
+}
+.subtitle{
+    margin-top:0;
+    font-size:20px;
+    opacity:.9;
+}
+@keyframes fadeLogo{
+    from{opacity:0;transform:translateY(20px);}
+    to{opacity:1;transform:translateY(0px);}
+}
+
+button{
+    margin-top:60px;
+    padding:16px 60px;
+    font-size:24px;
+    border:1px solid white;
+    background:transparent;
+    color:white;
+    cursor:pointer;
+    transition:.3s;
+}
+button:hover{
+    background:white;
+    color:black;
+    transform:scale(1.05);
+}
+
+#fade{
+    position:fixed;
+    width:100%;
+    height:100%;
+    background:black;
+    opacity:0;
+    pointer-events:none;
+    transition:2s;
+    z-index:10;
+}
+
+#story{
+    position:absolute;
+    width:100%;
+    height:100%;
+    display:none;
+    justify-content:center;
+    align-items:center;
+    color:white;
+    font-size:34px;
+    opacity:0;
+    transition:1s;
+    pointer-events:auto;
+    z-index:20;
+}
+
+.leaves{
+    position:fixed;
+    width:100%;
+    height:100%;
+    overflow:hidden;
+    pointer-events:none;
+    z-index:4;
+    transition: opacity 0.4s;
+}
+.leaves.hideLeaf{
+    opacity:0;
+    pointer-events:none;
+}
+
+.leaves span{
+    position:absolute;
+    width:18px;
+    height:18px;
+    background:rgba(255,255,255,.5);
+    animation:leaf 8s linear infinite;
+}
+.leaves span:nth-child(1){left:10%;animation-delay:0s;}
+.leaves span:nth-child(2){left:30%;animation-delay:1s;}
+.leaves span:nth-child(3){left:55%;animation-delay:3s;}
+.leaves span:nth-child(4){left:75%;animation-delay:2s;}
+.leaves span:nth-child(5){left:90%;animation-delay:5s;}
+
+@keyframes leaf{
+    from{transform:translateY(-50px) rotate(0deg);}
+    to{transform:translateY(120vh) translateX(80px) rotate(360deg);}
+}
+
+/* 第一章標題樣式 */
+.chapterBox{
+    position:fixed;
+    width:100%;
+    height:100%;
+    background:rgba(0,0,0,0.9);
+    z-index:25;
+    display:none;
+    justify-content:center;
+    align-items:center;
+    opacity:0;
+    transition:opacity 1s;
+}
+.chapterText{
+    font-size:60px;
+    color:#fff;
+    letter-spacing:10px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="background" id="bgWrap"></div>
+<div class="sceneImg" id="sceneWrap"></div>
+<div class="transition-overlay" id="transitionOverlay"></div>
+<div class="leaves" id="leafBox">
+    <span></span><span></span><span></span><span></span><span></span>
+</div>
+
+<div id="menu">
+    <h1 class="logo">最後一課</h1>
+    <p class="subtitle">死亡在陪伴下將會不再恐懼</p>
+    <button id="startBtn">開始遊戲</button>
+</div>
+
+<div id="nameScreen">
+    <h2 style="color:white; margin-bottom:20px;">請輸入你的名字</h2>
+    <input id="nameInput" type="text" placeholder="Your name">
+    <button id="confirmBtn">確認</button>
+</div>
+
+<div id="fade"></div>
+
+<div class="chapterBox" id="chapterWrap">
+    <div class="chapterText">第一章</div>
+</div>
+
+<div id="story">
+    <div id="dialogueBox">
+        <div id="typing"></div>
+    </div>
+</div>
+
+<script>
+let storyIndex = 0;
+let playerName = "";
+let storyStarted = false;
+
+// 引言：無圖片
+const introList = [
+    {text:"你好我是旁白", img:""},
+    {text:"以下你將以貓的視角帶入", img:""},
+    {text:"希望{{name}}看得開心", img:""},
+];
+
+// 第一章：每一句對應一張圖
+const chapter1List = [
+    {text:"我是剛出生的小貓。", img:"img/IMG_0299.jpg"},
+    {text:"曾短暫感受過貓媽媽的溫暖。", img:"img/IMG_0300.jpg"},
+    {text:"好景不常，媽媽某天出去打獵再也沒回來過。", img:"img/IMG_0301.jpg"},
+    {text:"我只能自己學會照顧自己。", img:"img/IMG_0302.jpg"},
+    {text:"學著自己搶食物。", img:"img/IMG_0303.jpg"},
+    {text:"成功了，嘻嘻。", img:"img/IMG_0304.jpg"},
+    {text:"隨著時間，我對周圍越來越警覺。", img:"img/IMG_0305.jpg"},
+    {text:"這天來了個老人，溫和的氣場讓我感覺不到絲毫的惡意。", img:"img/IMG_0306.jpg"},
+	{text:"回過神時，我已經被她抱在懷裡了。", img:"img/IMG_0307.jpg"},
+	{text:"她正用乾燥溫暖的手撫摸我。", img:"img/IMG_0308.jpg"},
+	{text:"她們好像很喜歡我...?", img:"img/IMG_0309.jpg"},
+	{text:"看來我很討小主人喜歡。", img:"img/IMG_0310.jpg"}
+];
+
+let currentList = introList;
+
+function startGame(){
+    document.getElementById("menu").style.display = "none";
+    document.getElementById("leafBox").classList.add("hideLeaf");
+    document.getElementById("nameScreen").style.display = "flex";
+}
+
+// 切換背景場景圖：首次載入不黑屏，後續切圖才黑屏過場
+function changeScene(imgPath, isFirst = false) {
+    const sceneWrap = document.getElementById("sceneWrap");
+    const overlay = document.getElementById("transitionOverlay");
+
+    if(isFirst){
+        if (!imgPath) {
+            sceneWrap.classList.remove("show");
+        } else {
+            sceneWrap.style.backgroundImage = `url(${imgPath})`;
+            sceneWrap.classList.add("show");
+        }
+        return;
+    }
+
+    overlay.style.opacity = 1;
+    setTimeout(()=>{
+        if (!imgPath) {
+            sceneWrap.classList.remove("show");
+        } else {
+            sceneWrap.style.backgroundImage = `url(${imgPath})`;
+            sceneWrap.classList.add("show");
+        }
+        overlay.style.opacity = 0;
+    },300);
+}
+
+function confirmName(){
+    playerName = document.getElementById("nameInput").value.trim();
+    if(playerName === "") playerName = "無名";
+
+    document.getElementById("nameScreen").style.display = "none";
+    const fadeEl = document.getElementById("fade");
+    const bgWrap = document.getElementById("bgWrap");
+
+    fadeEl.style.opacity = 1;
+    bgWrap.classList.add("hideBg");
+
+    setTimeout(() => {
+        fadeEl.style.opacity = 0;
+        const storyEl = document.getElementById("story");
+        storyEl.style.display = "flex";
+        storyEl.style.opacity = 1;
+        document.getElementById("dialogueBox").style.opacity = 1;
+
+        storyIndex = 0;
+        storyStarted = true;
+        currentList = introList;
+        changeScene(currentList[storyIndex].img, true);
+        typeText(currentList[storyIndex].text);
+        storyIndex++;
+    }, 1200);
+}
+
+function typeText(text){
+    const typingEl = document.getElementById("typing");
+    if(typingEl.timer) clearInterval(typingEl.timer);
+    let showText = text.replace(/{{name}}/g, playerName);
+    
+    typingEl.innerText = "";
+    let i = 0;
+    const timer = setInterval(()=>{
+        typingEl.innerText += showText[i];
+        i++;
+        if(i >= showText.length){
+            clearInterval(timer);
+            typingEl.timer = null;
+        }
+    },40);
+    typingEl.timer = timer;
+}
+
+document.addEventListener("DOMContentLoaded",()=>{
+    document.getElementById("startBtn").addEventListener("click", startGame);
+    document.getElementById("confirmBtn").addEventListener("click", confirmName);
+
+    document.getElementById("dialogueBox").addEventListener("click",()=>{
+        if(!storyStarted) return;
+
+        if(currentList === introList){
+            if(storyIndex < introList.length){
+                changeScene(introList[storyIndex].img);
+                typeText(introList[storyIndex].text);
+                storyIndex++;
+            }else{
+                const chapterWrap = document.getElementById("chapterWrap");
+                document.getElementById("dialogueBox").style.opacity = 0;
+                setTimeout(()=>{
+                    chapterWrap.style.display = "flex";
+                    setTimeout(()=> chapterWrap.style.opacity = 1,30);
+                },300);
+
+                setTimeout(()=>{
+                    chapterWrap.style.opacity = 0;
+                    setTimeout(()=>{
+                        chapterWrap.style.display = "none";
+                        document.getElementById("dialogueBox").style.opacity = 1;
+                        currentList = chapter1List;
+                        storyIndex = 0;
+                        changeScene(chapter1List[storyIndex].img, true);
+                        typeText(chapter1List[storyIndex].text);
+                        storyIndex++;
+                    },1000);
+                },2000);
+            }
+        }
+        else if(currentList === chapter1List){
+            if(storyIndex < chapter1List.length){
+                changeScene(chapter1List[storyIndex].img);
+                typeText(chapter1List[storyIndex].text);
+                storyIndex++;
+            }
+        }
+    });
+
+    document.getElementById("nameInput").addEventListener("keydown",(e)=>{
+        if(e.key === "Enter") confirmName();
+    });
+});
+</script>
+
+</body>
+</html>
